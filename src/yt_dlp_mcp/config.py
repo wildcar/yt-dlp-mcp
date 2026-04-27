@@ -37,6 +37,16 @@ class Settings(BaseSettings):
     # `node:/usr/bin/node` to pin a specific binary.
     js_runtimes: str = "node"
 
+    # The n-challenge solver (which decrypts streaming URLs) is no
+    # longer bundled with yt-dlp 2026.03+ — it lives in a separate
+    # `ejs` package fetched from GitHub on demand. Without this flag
+    # YouTube returns «No video formats found». yt-dlp caches the
+    # download in its user cache dir, so this is a one-time network
+    # cost per refresh. Set empty to disable the auto-fetch (e.g. if
+    # the host has no outbound github.com access — then deploy the
+    # solver manually and point yt-dlp at it via its own config).
+    remote_components: str = "ejs:github"
+
     # SQLite-backed task store: keeps in-flight download state across
     # service restarts so the bot's poller can re-attach to an unfinished
     # download instead of orphaning it.

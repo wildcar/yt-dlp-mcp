@@ -35,6 +35,8 @@ async def build_app_context(settings: Settings) -> AsyncIterator[AppContext]:
     yt_dlp = YtDlpClient(
         yt_dlp_bin=settings.yt_dlp_bin,
         cookies_file=settings.cookies_file,
+        js_runtimes=settings.js_runtimes,
+        remote_components=settings.remote_components,
     )
     tasks = TaskStore(path=settings.state_db_path)
     # GC old finished tasks on startup — keeps the SQLite from growing

@@ -77,12 +77,19 @@ class YtDlpClient:
     YouTube extraction logs «No supported JavaScript runtime» and
     falls back to lower-quality formats. Empty string disables the
     flag entirely (lets yt-dlp pick its own default)."""
+    remote_components: str = "ejs:github"
+    """yt-dlp's ``--remote-components`` source. Required for the EJS
+    n-challenge solver (separate package since 2026.03); without it
+    YouTube returns «No video formats found». Empty disables."""
 
     def _common_args(self) -> list[str]:
-        """Flags every invocation should carry (cookies + JS runtime)."""
+        """Flags every invocation should carry (cookies + JS runtime
+        + remote-components solver)."""
         argv: list[str] = []
         if self.js_runtimes:
             argv.extend(["--js-runtimes", self.js_runtimes])
+        if self.remote_components:
+            argv.extend(["--remote-components", self.remote_components])
         argv.extend(self._cookie_args())
         return argv
 
