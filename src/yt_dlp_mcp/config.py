@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     # bumps it independently of the OS package.
     yt_dlp_bin: str = "yt-dlp"
 
+    # JS runtime yt-dlp should use for the YouTube player-response
+    # decode and PO Token solver. yt-dlp 2026.03+ defaults to deno (not
+    # node) and refuses to fall back silently — without this, every
+    # YouTube probe hits «No supported JavaScript runtime». Set to a
+    # comma-separated list when multiple runtimes are installed; pass
+    # `node:/usr/bin/node` to pin a specific binary.
+    js_runtimes: str = "node"
+
     # SQLite-backed task store: keeps in-flight download state across
     # service restarts so the bot's poller can re-attach to an unfinished
     # download instead of orphaning it.

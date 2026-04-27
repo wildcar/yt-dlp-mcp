@@ -71,6 +71,20 @@ _FINISHED_TEMPLATE = 'post_hooks:{"state":"finished","filename":%(info.filename)
 class YtDlpClient:
     yt_dlp_bin: str = "yt-dlp"
     cookies_file: Path | None = None
+    js_runtimes: str = "node"
+    """Comma-separated list passed to yt-dlp's ``--js-runtimes``. yt-dlp
+    2026.03+ defaults to deno only; without an explicit value, every
+    YouTube extraction logs «No supported JavaScript runtime» and
+    falls back to lower-quality formats. Empty string disables the
+    flag entirely (lets yt-dlp pick its own default)."""
+
+    def _common_args(self) -> list[str]:
+        """Flags every invocation should carry (cookies + JS runtime)."""
+        argv: list[str] = []
+        if self.js_runtimes:
+            argv.extend(["--js-runtimes", self.js_runtimes])
+        argv.extend(self._cookie_args())
+        return argv
 
     async def probe(self, url: str) -> dict[str, Any]:
         """Run ``yt-dlp -J`` (full JSON metadata, no download).
@@ -78,7 +92,7 @@ class YtDlpClient:
         Returns the raw dict. Raises ``YtDlpError`` on non-zero exit.
         """
         argv = [self.yt_dlp_bin, "-J", "--no-warnings", "--no-playlist"]
-        argv.extend(self._cookie_args())
+        argv.extend(self._common_args())
         argv.append(url)
 
         proc = await asyncio.create_subprocess_exec(
@@ -104,7 +118,7 @@ class YtDlpClient:
             "--playlist-end",
             str(limit),
         ]
-        argv.extend(self._cookie_args())
+        argv.extend(self._common_args())
         argv.append(url)
 
         proc = await asyncio.create_subprocess_exec(
@@ -153,7 +167,7 @@ class YtDlpClient:
             "--progress-template",
             _FINISHED_TEMPLATE,
         ]
-        argv.extend(self._cookie_args())
+        argv.extend(self._common_args())
         argv.append(url)
         return DownloadProcess(argv=argv, output_path=output_path)
 
