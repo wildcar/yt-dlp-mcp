@@ -1,0 +1,26 @@
+[Unit]
+Description=yt-dlp-mcp (streamable HTTP)
+Documentation=https://github.com/wildcar/yt-dlp-mcp
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=movie
+Group=movie
+WorkingDirectory=/opt/yt-dlp-mcp
+EnvironmentFile=/etc/yt-dlp-mcp/yt-dlp-mcp.env
+ExecStart=/opt/yt-dlp-mcp/.venv/bin/yt-dlp-mcp
+Restart=always
+RestartSec=5
+
+# Hardening — yt-dlp downloads files into the configured OUTPUT_DIR;
+# everything else stays read-only.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/mnt/storage/Media/Video/Clip /opt/yt-dlp-mcp/.cache
+
+[Install]
+WantedBy=multi-user.target

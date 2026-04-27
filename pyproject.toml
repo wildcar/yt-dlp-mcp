@@ -1,0 +1,75 @@
+[project]
+name = "yt-dlp-mcp"
+version = "0.1.0"
+description = "MCP server: download videos via yt-dlp (YouTube and 1800+ supported sites)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "wildcar" }]
+keywords = ["mcp", "yt-dlp", "youtube", "video"]
+
+dependencies = [
+    "mcp>=1.2.0",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "structlog>=24.1",
+    "aiosqlite>=0.20",
+    "python-slugify>=8.0",
+    # yt-dlp is the runtime engine; we shell out to its CLI rather than
+    # using the Python API so individual downloads run as detached
+    # subprocesses (kills don't take the MCP process down with them) and
+    # systemd's auto-update path can swap the binary under us at any time.
+    "yt-dlp>=2025.10.0",
+]
+
+[project.scripts]
+yt-dlp-mcp = "yt_dlp_mcp.server:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.5",
+    "mypy>=1.10",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "ASYNC", "RUF"]
+ignore = ["E501", "RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_configs = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "mcp.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "slugify.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "yt_dlp.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-ra -q --strict-markers"
+markers = [
+    "integration: hits real youtube.com; requires network",
+]
