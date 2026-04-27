@@ -13,18 +13,38 @@ per channel slug, file stem from a slugified title.
 
 ## OS prerequisites
 
+Check what's already on the host before installing anything:
+
 ```bash
-sudo apt install -y python3.11 python3.11-venv ffmpeg
-# Node.js — yt-dlp's PO Token solver and a handful of JS-based
-# extractors run JS via `node`. NodeSource has a current LTS:
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs
-node --version  # sanity check; LTS is fine, no need to keep updating
+python3 --version   # need >=3.11 (Ubuntu 22.04 ships 3.10; 24.04+ ships 3.12)
+ffmpeg -version     # must be present
+which uv            # else: curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-`ffmpeg` is mandatory — yt-dlp uses it to mux video+audio streams into
-mp4. `node` is optional but hard-recommended (without it, several
-YouTube downloads fall back to lower-quality formats).
+**ffmpeg is the only hard dependency** — yt-dlp uses it to mux video
++ audio into mp4. Install if missing:
+
+```bash
+sudo apt install -y ffmpeg
+```
+
+**Python**: if system `python3` is older than 3.11, you don't need
+distro packages — `uv sync` will download a self-contained 3.11+ on
+demand (`uv python install 3.11`). Skip the `apt install python3.11`
+dance unless you have other reasons to want it system-wide.
+
+**Node.js is *optional*** — yt-dlp works without it for plain public
+YouTube videos. Node only kicks in for PO Token challenges (rare) and
+a handful of niche JS-driven extractors. If yt-dlp ever logs
+«PO Token solver requires node» on a particular URL, install on
+demand — distro packages are fine, no need for NodeSource:
+
+```bash
+sudo apt install -y nodejs
+```
+
+Ubuntu 22.04 ships Node 18+, 24.04 ships Node 20+ — both are above
+yt-dlp's minimum.
 
 ## First-time install
 
