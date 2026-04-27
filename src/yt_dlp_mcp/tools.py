@@ -162,13 +162,25 @@ async def start_download_impl(
             error=ToolError(code="unsupported", message="live streams are not supported.")
         )
 
-    output_path = allocate_output_path(
-        ctx.settings.output_dir,
-        channel=probe.channel or "unknown",
-        title=probe.title or probe.video_id,
-        video_id=probe.video_id,
-        extension="mp4",
-    )
+    # Re-use a prior on-disk file for the same URL when one exists. yt-dlp
+    # with --no-overwrites (its CLI default) will see the file already
+    # there and skip the actual download — the post-hooks still fire,
+    # the worker still records output_path, and the caller's poller
+    # registers the unchanged file with media-watch as usual. Without
+    # this lookup, allocate_output_path would invent a fresh
+    # `<stem>-2.mp4` sibling and yt-dlp would re-download to that path.
+    prior = ctx.tasks.find_complete_by_url(url)
+    prior_path = (prior or {}).get("output_path")
+    if prior_path and await asyncio.to_thread(_file_with_content, prior_path):
+        output_path = Path(prior_path)
+    else:
+        output_path = allocate_output_path(
+            ctx.settings.output_dir,
+            channel=probe.channel or "unknown",
+            title=probe.title or probe.video_id,
+            video_id=probe.video_id,
+            extension="mp4",
+        )
 
     task_id = secrets.token_hex(8)
     ctx.tasks.insert(task_id=task_id, url=url)

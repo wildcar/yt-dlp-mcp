@@ -121,6 +121,28 @@ class TaskStore:
             )
             return [dict(r) for r in cur.fetchall()]
 
+    def find_complete_by_url(self, url: str) -> dict[str, Any] | None:
+        """Most recent successfully-completed task for ``url`` (with a
+        non-null ``output_path``), or ``None`` if there isn't one.
+
+        The download flow uses this to reuse an existing on-disk file
+        instead of creating a -2/-3 collision-suffixed sibling: yt-dlp's
+        ``--no-overwrites`` (the CLI default) then sees the file is
+        already there and skips the actual download, so re-pasting a
+        URL is cheap rather than a full re-download."""
+        with self._tx() as cur:
+            cur.execute(
+                """
+                SELECT * FROM tasks
+                 WHERE url = ? AND state = 'complete' AND output_path IS NOT NULL
+                 ORDER BY updated_at DESC
+                 LIMIT 1
+                """,
+                (url,),
+            )
+            row = cur.fetchone()
+        return dict(row) if row else None
+
     def gc_history(self, keep: int) -> int:
         """Drop the oldest finished tasks, keeping the most recent ``keep``.
 
