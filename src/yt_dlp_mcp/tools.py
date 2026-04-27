@@ -229,25 +229,34 @@ async def _run_download(ctx: AppContext, task_id: str, handle: DownloadProcess) 
     rc = await handle.wait()
     ctx.procs.pop(task_id, None)
 
-    if rc != 0:
-        # yt-dlp's stderr is buffered; pull it now for the error envelope.
-        stderr_bytes = b""
-        if handle.proc is not None and handle.proc.stderr is not None:
-            try:
-                stderr_bytes = await handle.proc.stderr.read()
-            except Exception:
-                stderr_bytes = b""
-        msg = stderr_bytes.decode("utf-8", errors="replace").strip() or f"exit code {rc}"
-        ctx.tasks.update(task_id, state="failed", error=msg[:2000])
+    # yt-dlp 2026.03 sometimes exits non-zero from cleanup paths (e.g.
+    # save_cookies hits a read-only file) *after* the download already
+    # finished and the post-hooks fired. Trust the on-disk file: when
+    # `output_path` exists and is non-empty, we got the bytes regardless
+    # of what yt-dlp's exit code says.
+    final_path = output_path or str(handle.output_path)
+    on_disk = (
+        Path(final_path).is_file() and Path(final_path).stat().st_size > 0 if final_path else False
+    )
+
+    if rc == 0 or on_disk:
+        ctx.tasks.update(
+            task_id,
+            state="complete",
+            progress_pct=100.0,
+            output_path=final_path,
+        )
         return
 
-    final_path = output_path or str(handle.output_path)
-    ctx.tasks.update(
-        task_id,
-        state="complete",
-        progress_pct=100.0,
-        output_path=final_path,
-    )
+    # No file → real failure. Pull stderr for a useful error envelope.
+    stderr_bytes = b""
+    if handle.proc is not None and handle.proc.stderr is not None:
+        try:
+            stderr_bytes = await handle.proc.stderr.read()
+        except Exception:
+            stderr_bytes = b""
+    msg = stderr_bytes.decode("utf-8", errors="replace").strip() or f"exit code {rc}"
+    ctx.tasks.update(task_id, state="failed", error=msg[:2000])
 
 
 # ---------------------------------------------------------------------------

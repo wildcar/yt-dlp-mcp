@@ -26,7 +26,7 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
-ReadWritePaths=-/mnt/storage/Media/Video/Clip -/opt/yt-dlp-mcp/.cache
+ReadWritePaths=-/mnt/storage/Media/Video/Clip -/opt/yt-dlp-mcp/.cache -/etc/yt-dlp-mcp
 
 [Install]
 WantedBy=multi-user.target
