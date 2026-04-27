@@ -13,38 +13,33 @@ per channel slug, file stem from a slugified title.
 
 ## OS prerequisites
 
-Check what's already on the host before installing anything:
+One block, safe to re-run — apt is idempotent (already-installed
+packages are skipped, not reinstalled):
 
 ```bash
-python3 --version   # need >=3.11 (Ubuntu 22.04 ships 3.10; 24.04+ ships 3.12)
-ffmpeg -version     # must be present
-which uv            # else: curl -LsSf https://astral.sh/uv/install.sh | sh
+sudo apt update
+sudo apt install -y ffmpeg nodejs
+# uv if missing:
+which uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-**ffmpeg is the only hard dependency** — yt-dlp uses it to mux video
-+ audio into mp4. Install if missing:
+What this covers:
+- **ffmpeg** — mandatory; yt-dlp uses it to mux video + audio into mp4.
+- **nodejs** — pulled from the distro repo (Ubuntu 22.04 → Node 18+,
+  24.04 → Node 20+). yt-dlp needs it for PO Token challenges and a
+  handful of JS-based extractors; in practice most YouTube downloads
+  trip the PO Token path, so don't skip this.
+- **uv** — if not already on the host. Manages the Python interpreter
+  itself on demand (`uv sync` downloads a self-contained 3.11+ if
+  system `python3` is too old). No need for `apt install python3.11`.
+
+Verify after install:
 
 ```bash
-sudo apt install -y ffmpeg
+ffmpeg -version 2>&1 | head -1
+node --version
+uv --version
 ```
-
-**Python**: if system `python3` is older than 3.11, you don't need
-distro packages — `uv sync` will download a self-contained 3.11+ on
-demand (`uv python install 3.11`). Skip the `apt install python3.11`
-dance unless you have other reasons to want it system-wide.
-
-**Node.js is *optional*** — yt-dlp works without it for plain public
-YouTube videos. Node only kicks in for PO Token challenges (rare) and
-a handful of niche JS-driven extractors. If yt-dlp ever logs
-«PO Token solver requires node» on a particular URL, install on
-demand — distro packages are fine, no need for NodeSource:
-
-```bash
-sudo apt install -y nodejs
-```
-
-Ubuntu 22.04 ships Node 18+, 24.04 ships Node 20+ — both are above
-yt-dlp's minimum.
 
 ## First-time install
 
