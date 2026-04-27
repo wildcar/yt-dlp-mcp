@@ -96,7 +96,11 @@ class YtDlpClient:
     async def probe(self, url: str) -> dict[str, Any]:
         """Run ``yt-dlp -J`` (full JSON metadata, no download).
 
-        Returns the raw dict. Raises ``YtDlpError`` on non-zero exit.
+        Returns the raw dict. ``YtDlpError`` is raised only when stdout
+        does *not* contain a parseable JSON payload — yt-dlp 2026.03
+        sometimes prints valid metadata and *then* exits non-zero with a
+        Python traceback (yt-dlp bug, see e.g. PR #11842). We treat
+        valid JSON as authoritative regardless of return code.
         """
         argv = [self.yt_dlp_bin, "-J", "--no-warnings", "--no-playlist"]
         argv.extend(self._common_args())
@@ -108,15 +112,19 @@ class YtDlpClient:
             stderr=asyncio.subprocess.PIPE,
         )
         stdout, stderr = await proc.communicate()
-        if proc.returncode != 0:
-            raise YtDlpError(_clean_stderr(stderr) or "yt-dlp probe failed")
         try:
-            return json.loads(stdout)  # type: ignore[no-any-return]
-        except json.JSONDecodeError as exc:
-            raise YtDlpError(f"yt-dlp returned non-JSON: {exc}") from exc
+            payload: dict[str, Any] = json.loads(stdout)
+            return payload
+        except json.JSONDecodeError:
+            # No usable payload — surface the real error from stderr.
+            err = _clean_stderr(stderr) or f"yt-dlp probe exit code {proc.returncode}"
+            raise YtDlpError(err) from None
 
     async def list_playlist(self, url: str, *, limit: int) -> dict[str, Any]:
-        """Flat-extract a playlist; one JSON line per entry."""
+        """Flat-extract a playlist; one JSON line per entry.
+
+        Same JSON-over-RC tolerance as :meth:`probe`.
+        """
         argv = [
             self.yt_dlp_bin,
             "--flat-playlist",
@@ -134,12 +142,12 @@ class YtDlpClient:
             stderr=asyncio.subprocess.PIPE,
         )
         stdout, stderr = await proc.communicate()
-        if proc.returncode != 0:
-            raise YtDlpError(_clean_stderr(stderr) or "yt-dlp playlist fetch failed")
         try:
-            return json.loads(stdout)  # type: ignore[no-any-return]
-        except json.JSONDecodeError as exc:
-            raise YtDlpError(f"yt-dlp returned non-JSON: {exc}") from exc
+            payload: dict[str, Any] = json.loads(stdout)
+            return payload
+        except json.JSONDecodeError:
+            err = _clean_stderr(stderr) or f"yt-dlp playlist fetch exit code {proc.returncode}"
+            raise YtDlpError(err) from None
 
     def spawn_download(
         self,
