@@ -235,9 +235,7 @@ async def _run_download(ctx: AppContext, task_id: str, handle: DownloadProcess) 
     # `output_path` exists and is non-empty, we got the bytes regardless
     # of what yt-dlp's exit code says.
     final_path = output_path or str(handle.output_path)
-    on_disk = (
-        Path(final_path).is_file() and Path(final_path).stat().st_size > 0 if final_path else False
-    )
+    on_disk = bool(final_path) and await asyncio.to_thread(_file_with_content, final_path)
 
     if rc == 0 or on_disk:
         ctx.tasks.update(
@@ -396,6 +394,14 @@ def _row_to_task(row: dict[str, Any]) -> TaskInfo:
         created_at=str(row["created_at"]),
         updated_at=str(row["updated_at"]),
     )
+
+
+def _file_with_content(path: str) -> bool:
+    try:
+        st = Path(path).stat()
+    except OSError:
+        return False
+    return st.st_size > 0
 
 
 def _int_or_none(v: Any) -> int | None:
