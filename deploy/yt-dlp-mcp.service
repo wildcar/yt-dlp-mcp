@@ -14,13 +14,19 @@ ExecStart=/opt/yt-dlp-mcp/.venv/bin/yt-dlp-mcp
 Restart=always
 RestartSec=5
 
+# Make sure the SQLite-task-store directory exists before the namespace
+# is built — otherwise ReadWritePaths fails with status=226/NAMESPACE.
+ExecStartPre=/usr/bin/install -d -o movie -g movie -m 0755 /opt/yt-dlp-mcp/.cache
+
 # Hardening — yt-dlp downloads files into the configured OUTPUT_DIR;
-# everything else stays read-only.
+# everything else stays read-only. The `-` prefixes mark the path as
+# non-fatal if missing (so a fresh box without /mnt/storage mounted
+# doesn't crashloop).
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
-ReadWritePaths=/mnt/storage/Media/Video/Clip /opt/yt-dlp-mcp/.cache
+ReadWritePaths=-/mnt/storage/Media/Video/Clip -/opt/yt-dlp-mcp/.cache
 
 [Install]
 WantedBy=multi-user.target
