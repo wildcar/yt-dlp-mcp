@@ -19,8 +19,9 @@ packages are skipped, not reinstalled):
 ```bash
 sudo apt update
 sudo apt install -y ffmpeg nodejs
-# uv if missing:
-which uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
+# uv system-wide (UV_INSTALL_DIR=/usr/local/bin so the service user sees it):
+[ -x /usr/local/bin/uv ] || curl -LsSf https://astral.sh/uv/install.sh \
+    | sudo env UV_INSTALL_DIR=/usr/local/bin sh
 ```
 
 What this covers:
