@@ -14,7 +14,6 @@ dependencies = [
     "pydantic-settings>=2.3",
     "structlog>=24.1",
     "aiosqlite>=0.20",
-    "python-slugify>=8.0",
     # yt-dlp is the runtime engine; we shell out to its CLI rather than
     # using the Python API so individual downloads run as detached
     # subprocesses (kills don't take the MCP process down with them) and
@@ -56,10 +55,6 @@ plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
 module = "mcp.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "slugify.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

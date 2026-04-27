@@ -1,37 +1,63 @@
-"""ASCII-slug helpers — stable, Plex-friendly file/dir names.
+"""Filename helpers for downloaded videos.
 
-Plex matches video files by the directory + filename pair, so renames
-during library scans are expensive (the watch history rebinds). Slugs
-here aim for: deterministic, ASCII-only, no spaces, length-capped, and
-collision-aware.
+We keep the original title and channel name as the human reads them —
+Cyrillic, accents, mixed scripts — and only strip characters that are
+unsafe on the filesystem (or that mangle URLs / shells later in the
+pipeline). Linux ext4 and Plex both handle Unicode names fine; the
+old all-ASCII transliteration was over-cautious.
+
+Removed characters get replaced with a space, then runs of whitespace
+collapse to a single space and the result is trimmed. Length is capped
+at a UTF-8 *byte* count because ext4 caps file names at 255 bytes.
 """
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
-from slugify import slugify as _slugify
+# Filesystem caps (UTF-8 bytes, not characters). 200 leaves room for
+# a "-2"/"-3" collision suffix and the ".mp4" extension under the
+# 255-byte limit.
+_MAX_NAME_BYTES = 200
+_MAX_CHANNEL_BYTES = 150
 
-# Filesystem-side caps. Linux ext4 / xfs allow 255 bytes per name; we
-# stay well under that with multibyte-safe ASCII slugs (each char = 1
-# byte after slugify).
-_MAX_NAME_LEN = 80
-_MAX_CHANNEL_LEN = 60
+# Characters we replace with a space before name normalisation:
+# - / \\           — path separators (Linux + Windows)
+# - : * ? " < > | — Windows-reserved (keep names portable for backups)
+# - #              — fragment / route confusion
+# - control chars  — never useful in a filename
+_UNSAFE_RE = re.compile(r'[\\/:*?"<>|#\x00-\x1f]')
+_WHITESPACE_RE = re.compile(r"\s+")
+
+
+def _clean(name: str, *, max_bytes: int) -> str:
+    s = _UNSAFE_RE.sub(" ", name or "")
+    s = _WHITESPACE_RE.sub(" ", s).strip()
+    # Strip trailing dots / spaces — POSIX accepts them but most cross-
+    # platform tooling chokes (Windows refuses, Samba normalises away).
+    s = s.rstrip(". ")
+    if not s:
+        return s
+    encoded = s.encode("utf-8")
+    if len(encoded) <= max_bytes:
+        return s
+    # Truncate by bytes, then back up to a valid UTF-8 boundary.
+    truncated = encoded[:max_bytes]
+    while truncated and (truncated[-1] & 0xC0) == 0x80:
+        truncated = truncated[:-1]
+    return truncated.decode("utf-8", errors="ignore").rstrip(". ")
 
 
 def channel_slug(channel: str) -> str:
-    s = _slugify(channel or "", max_length=_MAX_CHANNEL_LEN, word_boundary=True)
-    return s or "unknown-channel"
+    return _clean(channel, max_bytes=_MAX_CHANNEL_BYTES) or "Без канала"
 
 
 def video_slug(title: str, *, video_id: str) -> str:
-    """Slug for the *file stem*. Falls back to the video id when the
-    title slugifies to an empty string (rare — emoji-only titles, etc.).
-    """
-    s = _slugify(title or "", max_length=_MAX_NAME_LEN, word_boundary=True)
-    if not s:
-        return video_id
-    return s
+    """Cleaned-up filename stem. Falls back to ``video_id`` when the
+    title cleans to an empty string (emoji-only titles, single-`#`,
+    etc.)."""
+    return _clean(title, max_bytes=_MAX_NAME_BYTES) or video_id
 
 
 def allocate_output_path(
