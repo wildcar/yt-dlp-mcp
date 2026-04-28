@@ -67,17 +67,15 @@ class FakeYtDlpClient(YtDlpClient):
         output_path: Path,
         format_selector: str = "",
     ) -> DownloadProcess:
-        # Pretend yt-dlp wrote the output file (the worker resolves the
-        # final path from progress events; the real tool only cares the
-        # file appears in the task row).
+        # Pretend yt-dlp wrote the output file. The worker resolves the
+        # final path from `handle.output_path` (the literal `-o` we
+        # passed), so the test only needs the file to exist.
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text("")
-        events = list(self.fake_progress)
-        events.append(ProgressLine(state="finished", output_path=str(output_path)))
         return FakeDownloadProcess(
             argv=[],
             output_path=output_path,
-            progress_events=events,
+            progress_events=list(self.fake_progress),
             rc=self.fake_rc,
         )
 

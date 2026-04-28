@@ -56,8 +56,14 @@ class ProgressLine:
 # fields render as `null` instead of breaking the line — `%d`/`%f`
 # bail out on None, which is the steady state for `total_bytes` /
 # `eta` / `speed` early in a download (and forever for HLS streams
-# without Content-Length). Dropped JSON lines = no progress in the
-# task store = /status that flips 0 → 100% with nothing in between.
+# without Content-Length).
+#
+# Single template only. yt-dlp recognises `download` /
+# `download-title` / `postprocess` / `postprocess-title` as valid
+# prefixes; passing two `--progress-template` flags with an unknown
+# second prefix (e.g. `post_hooks:`) makes yt-dlp silently interpret
+# the *second* one as an override for the default `download:` slot,
+# which is how this command silently emitted nothing during downloads.
 _PROGRESS_TEMPLATE = (
     "download:"
     '{"state":"downloading",'
@@ -68,7 +74,6 @@ _PROGRESS_TEMPLATE = (
     '"speed":%(progress.speed)j,'
     '"filename":%(info.filename)j}'
 )
-_FINISHED_TEMPLATE = 'post_hooks:{"state":"finished","filename":%(info.filename)j}'
 
 
 @dataclass
@@ -183,8 +188,6 @@ class YtDlpClient:
             "--progress",
             "--progress-template",
             _PROGRESS_TEMPLATE,
-            "--progress-template",
-            _FINISHED_TEMPLATE,
         ]
         argv.extend(self._common_args())
         argv.append(url)
@@ -259,7 +262,7 @@ class DownloadProcess:
         await self.proc.wait()
 
 
-_PROGRESS_RE = re.compile(r"^(?:download|post_hooks):(\{.*\})$")
+_PROGRESS_RE = re.compile(r"^download:(\{.*\})$")
 
 
 def _parse_progress_line(text: str) -> ProgressLine | None:
@@ -272,8 +275,6 @@ def _parse_progress_line(text: str) -> ProgressLine | None:
         return None
 
     state = str(data.get("state") or "")
-    if state == "finished":
-        return ProgressLine(state="finished", output_path=data.get("filename"))
     if state != "downloading":
         return None
 

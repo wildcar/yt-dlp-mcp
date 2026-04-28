@@ -221,12 +221,8 @@ async def _run_download(ctx: AppContext, task_id: str, handle: DownloadProcess) 
 
     ctx.tasks.update(task_id, state="running")
 
-    output_path: str | None = None
     try:
         async for line in handle.iter_progress():
-            if line.state == "finished":
-                output_path = line.output_path or output_path
-                continue
             ctx.tasks.update(
                 task_id,
                 progress_pct=line.progress_pct,
@@ -243,10 +239,10 @@ async def _run_download(ctx: AppContext, task_id: str, handle: DownloadProcess) 
 
     # yt-dlp 2026.03 sometimes exits non-zero from cleanup paths (e.g.
     # save_cookies hits a read-only file) *after* the download already
-    # finished and the post-hooks fired. Trust the on-disk file: when
-    # `output_path` exists and is non-empty, we got the bytes regardless
+    # finished. Trust the on-disk file: when the literal -o path we
+    # gave yt-dlp exists and is non-empty, we got the bytes regardless
     # of what yt-dlp's exit code says.
-    final_path = output_path or str(handle.output_path)
+    final_path = str(handle.output_path)
     on_disk = bool(final_path) and await asyncio.to_thread(_file_with_content, final_path)
 
     if rc == 0 or on_disk:
