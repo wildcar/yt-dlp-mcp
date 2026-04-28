@@ -51,17 +51,21 @@ class ProgressLine:
     output_path: str | None = None  # set on 'finished'
 
 
-# `--progress-template` emits one JSONL line per tick. We ask for the
-# canonical fields explicitly so the parser doesn't depend on yt-dlp's
-# default human-readable output.
+# `--progress-template` emits one JSONL line per tick. Every value goes
+# through yt-dlp's `j` filter (JSON-quote) so missing / not-yet-known
+# fields render as `null` instead of breaking the line — `%d`/`%f`
+# bail out on None, which is the steady state for `total_bytes` /
+# `eta` / `speed` early in a download (and forever for HLS streams
+# without Content-Length). Dropped JSON lines = no progress in the
+# task store = /status that flips 0 → 100% with nothing in between.
 _PROGRESS_TEMPLATE = (
     "download:"
     '{"state":"downloading",'
-    '"downloaded_bytes":%(progress.downloaded_bytes)d,'
-    '"total_bytes":%(progress.total_bytes)d,'
-    '"total_bytes_estimate":%(progress.total_bytes_estimate)d,'
-    '"eta":%(progress.eta)d,'
-    '"speed":%(progress.speed)f,'
+    '"downloaded_bytes":%(progress.downloaded_bytes)j,'
+    '"total_bytes":%(progress.total_bytes)j,'
+    '"total_bytes_estimate":%(progress.total_bytes_estimate)j,'
+    '"eta":%(progress.eta)j,'
+    '"speed":%(progress.speed)j,'
     '"filename":%(info.filename)j}'
 )
 _FINISHED_TEMPLATE = 'post_hooks:{"state":"finished","filename":%(info.filename)j}'
