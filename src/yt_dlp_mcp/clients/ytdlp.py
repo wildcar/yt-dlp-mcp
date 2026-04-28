@@ -246,9 +246,18 @@ class DownloadProcess:
             if not raw:
                 return
             text = raw.decode("utf-8", errors="replace").strip()
+            if not text:
+                continue
             parsed = _parse_progress_line(text)
-            if parsed is not None:
-                yield parsed
+            if parsed is None:
+                # Visibility into what yt-dlp actually emits when our
+                # template parser misses — debugging remote shenanigans
+                # like a silently-broken progress format. Drops a
+                # bounded prefix so a giant warning doesn't fill the
+                # journal.
+                log.info("ytdlp.stdout_unparsed", line=text[:200])
+                continue
+            yield parsed
 
     async def wait(self) -> int:
         assert self.proc is not None
