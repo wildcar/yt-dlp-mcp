@@ -55,21 +55,22 @@ class ProgressLine:
 # through yt-dlp's `j` filter (JSON-quote) so missing / not-yet-known
 # fields render as `null` instead of breaking the line — `%d`/`%f`
 # bail out on None, which is the steady state for `total_bytes` /
-# `eta` / `speed` early in a download (and forever for HLS streams
-# without Content-Length).
+# `eta` / `speed` early in a download.
 #
-# Single template only. yt-dlp recognises `download` /
-# `download-title` / `postprocess` / `postprocess-title` as valid
-# prefixes; passing two `--progress-template` flags with an unknown
-# second prefix (e.g. `post_hooks:`) makes yt-dlp silently interpret
-# the *second* one as an override for the default `download:` slot,
-# which is how this command silently emitted nothing during downloads.
+# Note on the `download:` prefix: yt-dlp's flag value syntax is
+# `[TYPE:]TEMPLATE`. With `download:{…}` the TYPE selector consumes
+# `download:` and only the body lands in stdout. So the regex below
+# matches a bare JSON object, **not** a prefixed line.
+#
+# Note on `total_bytes_estimate`: yt-dlp 2026.03 sometimes leaks an
+# unquoted `NA` sentinel for that field instead of the `null` you'd
+# expect from `j` — it's a yt-dlp bug. We don't ask for the field at
+# all; `total_bytes` is enough.
 _PROGRESS_TEMPLATE = (
     "download:"
     '{"state":"downloading",'
     '"downloaded_bytes":%(progress.downloaded_bytes)j,'
     '"total_bytes":%(progress.total_bytes)j,'
-    '"total_bytes_estimate":%(progress.total_bytes_estimate)j,'
     '"eta":%(progress.eta)j,'
     '"speed":%(progress.speed)j,'
     '"filename":%(info.filename)j}'
@@ -250,12 +251,13 @@ class DownloadProcess:
                 continue
             parsed = _parse_progress_line(text)
             if parsed is None:
-                # Visibility into what yt-dlp actually emits when our
-                # template parser misses — debugging remote shenanigans
-                # like a silently-broken progress format. Drops a
-                # bounded prefix so a giant warning doesn't fill the
-                # journal.
-                log.info("ytdlp.stdout_unparsed", line=text[:200])
+                # Most non-progress lines are yt-dlp's own banners
+                # («[youtube] Extracting URL: …», «[Merger] …», etc.)
+                # — we only log JSON-shaped lines that failed to parse,
+                # which is the signal we care about (template format
+                # drift in a future yt-dlp release).
+                if text.startswith("{"):
+                    log.warning("ytdlp.json_unparsed", line=text[:200])
                 continue
             yield parsed
 
@@ -271,15 +273,19 @@ class DownloadProcess:
         await self.proc.wait()
 
 
-_PROGRESS_RE = re.compile(r"^download:(\{.*\})$")
+_PROGRESS_PROBE_RE = re.compile(r'^\{"state":"downloading"')
+# yt-dlp 2026.03 sometimes leaks the literal `NA` token unquoted for
+# absent numeric fields, busting strict json.loads. Patch each `:NA`
+# right before a comma/closing-brace into `:null` so the rest of the
+# line stays parseable.
+_NA_LITERAL_RE = re.compile(r":NA([,}])")
 
 
 def _parse_progress_line(text: str) -> ProgressLine | None:
-    m = _PROGRESS_RE.match(text)
-    if m is None:
+    if _PROGRESS_PROBE_RE.match(text) is None:
         return None
     try:
-        data = json.loads(m.group(1))
+        data = json.loads(_NA_LITERAL_RE.sub(r":null\1", text))
     except json.JSONDecodeError:
         return None
 
@@ -289,8 +295,7 @@ def _parse_progress_line(text: str) -> ProgressLine | None:
 
     total = data.get("total_bytes")
     if not isinstance(total, int) or total <= 0:
-        total_est = data.get("total_bytes_estimate")
-        total = total_est if isinstance(total_est, int) and total_est > 0 else None
+        total = None
 
     downloaded = int(data.get("downloaded_bytes") or 0)
     pct = (downloaded / total * 100.0) if total else 0.0
