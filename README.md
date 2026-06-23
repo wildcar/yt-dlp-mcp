@@ -56,6 +56,21 @@ Node.js for JS-based extractors, the cookies file), systemd unit
 files, and the auto-update timer that pulls a fresh `yt-dlp` once a
 day. Read it before the first install.
 
+### Update an existing install
+
+After pushing new code to `main`, redeploy on the media host:
+
+```bash
+sudo -u movie git -C /opt/yt-dlp-mcp pull --ff-only
+sudo systemctl restart yt-dlp-mcp
+```
+
+Insert `sudo -u movie bash -c "cd /opt/yt-dlp-mcp && uv sync --no-dev"`
+between the two **only** when dependencies changed (`pyproject.toml` /
+lockfile touched). The daily `yt-dlp-mcp-update.timer` bumps the
+*yt-dlp binary*, not this service's code — code changes ship manually
+via the commands above.
+
 ## Composite media-id
 
 Downloads register on `media-watch-web` under `yt-<video_id>` (or

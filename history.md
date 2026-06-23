@@ -6,6 +6,18 @@ is interrupted; expand it with results once the change lands.
 
 ---
 
+## 2026-06-23 — README: document redeploy commands
+
+**Why.** The redeploy steps (pull + restart on the media host) lived only
+in operator memory; a fix is only live after they run, so they belong in
+the repo.
+
+**What.** Added an «Update an existing install» subsection to README's
+Deploy section: `git -C /opt/yt-dlp-mcp pull --ff-only` +
+`systemctl restart yt-dlp-mcp`, with the `uv sync --no-dev` caveat for
+dependency changes and a note distinguishing service-code updates from
+the `yt-dlp-mcp-update.timer` that bumps the yt-dlp binary.
+
 ## 2026-06-23 — probe(): reject non-dict yt-dlp JSON (null-payload crash)
 
 **Why.** A user pasted a video URL: `start_download` failed with
