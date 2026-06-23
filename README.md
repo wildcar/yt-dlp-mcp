@@ -51,7 +51,7 @@ All settings come from env vars (see `.env.example`):
 ## Deploy
 
 End-to-end deploy on the media host (Ubuntu 22.04+) is documented in
-[`env.md`](./env.md) — covers OS prerequisites (Python 3.11+, ffmpeg,
+[`AGENTS/ENV.md`](./AGENTS/ENV.md) — covers OS prerequisites (Python 3.11+, ffmpeg,
 Node.js for JS-based extractors, the cookies file), systemd unit
 files, and the auto-update timer that pulls a fresh `yt-dlp` once a
 day. Read it before the first install.
@@ -77,4 +77,4 @@ Downloads register on `media-watch-web` under `yt-<video_id>` (or
 `dl-<sha1(url)[:12]>` for non-YouTube sources where there's no canonical
 short id). The schema is the same as for rutracker downloads — the
 prefix prevents collisions between sources. See the workspace-level
-`AGENTS-SUMMARY.md` for the full pipeline.
+[`../AGENTS/SPEC.md`](../AGENTS/SPEC.md) for the full pipeline.
