@@ -6,6 +6,34 @@ is interrupted; expand it with results once the change lands.
 
 ---
 
+## 2026-06-23 — probe(): reject non-dict yt-dlp JSON (null-payload crash)
+
+**Why.** A user pasted a video URL: `start_download` failed with
+`Error executing tool start_download: 'NoneType' object has no attribute
+'get'`, and a re-paste showed the bot's «Ссылка не распознана…». One
+root cause for both. `YtDlpClient.probe()` returns `json.loads(stdout)`
+unchecked while typed `dict[str, Any]`. yt-dlp can emit a bare JSON
+`null` on stdout (an extractor matched the URL but produced no info dict
+— a transient YouTube extraction miss that still exits via the dump-json
+path). `json.loads(b"null")` is `None`, so `_to_probe(None)` does
+`None.get("formats")` → the AttributeError, which escapes the tool and
+surfaces to the bot. The preview probe happened to return a valid dict
+(card shown) but the confirm-time re-probe returned `null`; on the
+re-paste the preview probe itself returned `null`, crashing `probe` →
+`MCPClientError` → the bot's catch-all «не распознана».
+
+**What.**
+- `probe()` and `list_playlist()` now validate the parsed payload is a
+  `dict`; any non-object (null / list / scalar) raises `YtDlpError`
+  carrying stderr. That routes through the already-handled error path:
+  `probe_failed` / `upstream_error` envelopes → graceful bot messages,
+  no raw exception leak. Covers all three `probe()` call sites
+  (`probe_impl`, `start_download_impl`, `health_check_impl`) at the
+  client boundary in one place.
+- Regression tests: real `YtDlpClient` with a mocked subprocess emitting
+  `null` / a JSON list on stdout must raise `YtDlpError`, and the
+  happy-path dict still parses.
+
 ## 2026-04-27 — Initial scaffold
 
 **Why.** Cross-repo plan (see `AGENTS-TODO.md` → «YouTube URL pasted-link

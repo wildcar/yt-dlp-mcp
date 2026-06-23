@@ -123,12 +123,21 @@ class YtDlpClient:
         )
         stdout, stderr = await proc.communicate()
         try:
-            payload: dict[str, Any] = json.loads(stdout)
-            return payload
+            payload: Any = json.loads(stdout)
         except json.JSONDecodeError:
             # No usable payload — surface the real error from stderr.
             err = _clean_stderr(stderr) or f"yt-dlp probe exit code {proc.returncode}"
             raise YtDlpError(err) from None
+        if not isinstance(payload, dict):
+            # yt-dlp can print a bare `null` (valid JSON) on stdout when an
+            # extractor matches the URL but yields no info dict — a transient
+            # YouTube extraction miss that still exits via the dump-json path.
+            # Treat any non-object payload as a failed extraction so callers
+            # get a handled YtDlpError instead of a None leaking into
+            # `_to_probe` as «'NoneType' object has no attribute 'get'».
+            err = _clean_stderr(stderr) or "yt-dlp returned no video metadata"
+            raise YtDlpError(err) from None
+        return payload
 
     async def list_playlist(self, url: str, *, limit: int) -> dict[str, Any]:
         """Flat-extract a playlist; one JSON line per entry.
@@ -153,11 +162,14 @@ class YtDlpClient:
         )
         stdout, stderr = await proc.communicate()
         try:
-            payload: dict[str, Any] = json.loads(stdout)
-            return payload
+            payload: Any = json.loads(stdout)
         except json.JSONDecodeError:
             err = _clean_stderr(stderr) or f"yt-dlp playlist fetch exit code {proc.returncode}"
             raise YtDlpError(err) from None
+        if not isinstance(payload, dict):
+            err = _clean_stderr(stderr) or "yt-dlp returned no playlist data"
+            raise YtDlpError(err) from None
+        return payload
 
     def spawn_download(
         self,
