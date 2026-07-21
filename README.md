@@ -47,6 +47,7 @@ All settings come from env vars (see `.env.example`):
 | `MCP_TRANSPORT`              | `stdio` (default), `sse`, or `streamable-http`.                      |
 | `PLAYLIST_PREVIEW_LIMIT`     | Default cap for `list_playlist`. Default `20`.                       |
 | `TASK_HISTORY_KEEP`          | Recent finished tasks kept in SQLite. Default `500`.                 |
+| `PROBE_TIMEOUT_SECONDS`      | Timeout for probe/playlist metadata subprocesses. Default `30`.      |
 
 ## Deploy
 

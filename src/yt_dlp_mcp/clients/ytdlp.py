@@ -81,6 +81,7 @@ _PROGRESS_TEMPLATE = (
 class YtDlpClient:
     yt_dlp_bin: str = "yt-dlp"
     cookies_file: Path | None = None
+    probe_timeout_seconds: float = 30.0
     js_runtimes: str = "node"
     """Comma-separated list passed to yt-dlp's ``--js-runtimes``. yt-dlp
     2026.03+ defaults to deno only; without an explicit value, every
@@ -121,7 +122,7 @@ class YtDlpClient:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await proc.communicate()
+        stdout, stderr = await self._communicate_metadata(proc)
         try:
             payload: Any = json.loads(stdout)
         except json.JSONDecodeError:
@@ -160,7 +161,7 @@ class YtDlpClient:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await proc.communicate()
+        stdout, stderr = await self._communicate_metadata(proc)
         try:
             payload: Any = json.loads(stdout)
         except json.JSONDecodeError:
@@ -170,6 +171,19 @@ class YtDlpClient:
             err = _clean_stderr(stderr) or "yt-dlp returned no playlist data"
             raise YtDlpError(err) from None
         return payload
+
+    async def _communicate_metadata(
+        self, proc: asyncio.subprocess.Process
+    ) -> tuple[bytes, bytes]:
+        """Collect a metadata command and reap it when the upstream hangs."""
+        try:
+            return await asyncio.wait_for(proc.communicate(), timeout=self.probe_timeout_seconds)
+        except TimeoutError:
+            proc.kill()
+            await proc.wait()
+            raise YtDlpError(
+                f"yt-dlp metadata extraction timed out after {self.probe_timeout_seconds:g} seconds"
+            ) from None
 
     def spawn_download(
         self,

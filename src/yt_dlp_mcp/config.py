@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     # garbage-collecting on startup. Doesn't affect on-disk video files.
     task_history_keep: int = 500
 
+    # Metadata extraction should finish quickly. Without a deadline an
+    # upstream YouTube request can leave probe/start_download waiting forever.
+    probe_timeout_seconds: float = Field(30.0, gt=0)
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

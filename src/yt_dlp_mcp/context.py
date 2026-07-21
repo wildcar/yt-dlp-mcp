@@ -37,6 +37,7 @@ async def build_app_context(settings: Settings) -> AsyncIterator[AppContext]:
         cookies_file=settings.cookies_file,
         js_runtimes=settings.js_runtimes,
         remote_components=settings.remote_components,
+        probe_timeout_seconds=settings.probe_timeout_seconds,
     )
     tasks = TaskStore(path=settings.state_db_path)
     # GC old finished tasks on startup — keeps the SQLite from growing

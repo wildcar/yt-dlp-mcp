@@ -28,6 +28,24 @@ class _FakeProc:
         return self._stdout, self._stderr
 
 
+class _HangingProc(_FakeProc):
+    def __init__(self) -> None:
+        super().__init__(b"")
+        self.killed = False
+        self.waited = False
+
+    async def communicate(self) -> tuple[bytes, bytes]:
+        await asyncio.Event().wait()
+        raise AssertionError("unreachable")
+
+    def kill(self) -> None:
+        self.killed = True
+
+    async def wait(self) -> int:
+        self.waited = True
+        return -9
+
+
 def _patch_exec(monkeypatch: pytest.MonkeyPatch, proc: _FakeProc) -> None:
     async def _fake_exec(*args: object, **kwargs: object) -> _FakeProc:
         return proc
@@ -56,6 +74,17 @@ async def test_probe_returns_dict_on_valid_payload(monkeypatch: pytest.MonkeyPat
     _patch_exec(monkeypatch, _FakeProc(b'{"id": "abc", "title": "Hi"}'))
     raw = await YtDlpClient().probe("https://youtu.be/abc")
     assert raw["id"] == "abc"
+
+
+async def test_probe_kills_and_reaps_hung_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
+    proc = _HangingProc()
+    _patch_exec(monkeypatch, proc)
+
+    with pytest.raises(YtDlpError, match="timed out"):
+        await YtDlpClient(probe_timeout_seconds=0.01).probe("https://youtu.be/abc")
+
+    assert proc.killed is True
+    assert proc.waited is True
 
 
 async def test_list_playlist_raises_on_null_stdout(monkeypatch: pytest.MonkeyPatch) -> None:

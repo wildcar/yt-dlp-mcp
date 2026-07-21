@@ -5,6 +5,12 @@ cross-repo log is `../AGENTS/HISTORY.md`.
 
 ---
 
+## 2026-07-21 · Bound stalled yt-dlp metadata extraction
+- What: Added a configurable 30-second timeout that kills and reaps hung probe/playlist subprocesses, including the probe inside `start_download`.
+- Why: Production accepted a Telegram download callback but then waited forever for yt-dlp metadata, leaving the user without a result.
+- Files: `config.py`, `context.py`, `clients/ytdlp.py`, `.env.example`, `README.md`, harness docs, tests.
+- Next: Redeploy `yt-dlp-mcp`, then inspect the structured timeout/upstream error if refreshed cookies still cannot extract the video.
+
 ## 2026-06-23 · Migrate harness to agent-template layout
 - What: Restructured repo docs to the `wildcar/agent-template` harness (`AGENTS.md`, `CLAUDE.md` pointer, `AGENTS/{SPEC,STATE,HISTORY,MEMORY,ENV}.md`, `docs/adr/`).
 - Why: Adopt the standard harness so per-repo work keeps the right context.

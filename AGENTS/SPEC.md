@@ -35,6 +35,8 @@ structured errors, never raised exceptions across the boundary. Registered in
   — `yt-dlp -J`, no download. `Probe` carries `video_id`, `url`, `title`,
   `duration_seconds`, `channel`, `uploader`, `upload_date`, `description`,
   `thumbnails[]`, `formats[]` (with `is_progressive`), `is_live`, `age_limit`.
+  The subprocess is terminated after `PROBE_TIMEOUT_SECONDS` (default 30) and
+  returns a structured `upstream_error`, so callers never wait indefinitely.
 - `list_playlist(url, limit?) -> ListPlaylistResponse{ playlist_id, playlist_title,
   total_entries, entries[], error }`
   — `--flat-playlist -J --playlist-end <limit>`; `limit` defaults to
@@ -145,7 +147,8 @@ Env vars (`.env.example`): `OUTPUT_DIR`, `COOKIES_FILE`, `YT_DLP_BIN`,
 `JS_RUNTIMES`, `REMOTE_COMPONENTS`, `STATE_DB_PATH`, `MCP_AUTH_TOKEN`,
 `MCP_HTTP_HOST`/`_PORT` (default `127.0.0.1:8769`), `MCP_TRANSPORT`
 (`stdio` | `sse` | `streamable-http`), `PLAYLIST_PREVIEW_LIMIT` (20),
-`TASK_HISTORY_KEEP` (500).
+`TASK_HISTORY_KEEP` (500), `PROBE_TIMEOUT_SECONDS` (30; covers probe and playlist
+metadata subprocesses, including the probe inside `start_download`).
 
 ## Current state
 

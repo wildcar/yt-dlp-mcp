@@ -13,6 +13,9 @@ get_download_status (+ health_check) so the bot can download a pasted video URL
 - Five tools live, verified via MCP Inspector; deployed on the media host
   (`v.wildcar.ru`, systemd port 8769) with the daily `yt-dlp-mcp-update.timer`.
 - Wired into the bot's pasted-URL flow + 60 s completion poller.
+- Metadata subprocesses are bounded by `PROBE_TIMEOUT_SECONDS=30`; a stalled
+  YouTube probe is killed and returned as a structured error instead of hanging
+  `probe`, `start_download`, or `health_check` indefinitely.
 - Harness migrated to the `agent-template` layout.
 
 ## Next
