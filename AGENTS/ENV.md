@@ -6,7 +6,7 @@ the cross-repo picture; this file holds only what's specific to this server.
 
 ## Where it lives
 
-Media host `v.wildcar.ru` (same box as `rtorrent-mcp`). Listens on `127.0.0.1:8769`
+Media host `homesrv` (public name `v.wildcar.ru`; same box as `rtorrent-mcp`). Listens on `127.0.0.1:8769`
 (or `0.0.0.0:8769` behind the firewall) over streamable-HTTP. The bot hits
 `http://wildcar.ru:8769/mcp` with the shared `MCP_AUTH_TOKEN`. Service user `movie`,
 `/opt/yt-dlp-mcp`. Output dir `/mnt/storage/Media/Video/Clip/` (Plex picks it up via

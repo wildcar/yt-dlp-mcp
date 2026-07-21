@@ -5,6 +5,12 @@ cross-repo log is `../AGENTS/HISTORY.md`.
 
 ---
 
+## 2026-07-21 · Correct media-server hostname
+- What: Documented `homesrv` as the media-server hostname and `v.wildcar.ru` as its public name.
+- Why: Maintainer clarified that yt-dlp service and cookie operations belong on `homesrv`; the Telegram bot runs elsewhere.
+- Files: `AGENTS.md`, `AGENTS/{SPEC,STATE,HISTORY,ENV}.md`.
+- Next: Deploy the pending yt-dlp changes on `homesrv` only.
+
 ## 2026-07-21 · Reuse preview metadata on download confirmation
 - What: Added a bounded 10-minute/128-entry probe cache; `start_download` reuses the preview payload instead of probing YouTube again.
 - Why: The reported URL produced a preview, but the duplicate probe after «Скачать» stalled before a task could be created.

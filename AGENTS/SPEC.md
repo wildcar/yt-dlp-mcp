@@ -9,7 +9,7 @@ MCP server wrapping the [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) CLI. Gives 
 chat agent / bot a mid-pipeline "download by URL" path: probe a pasted video URL,
 optionally expand a playlist, kick off a background download, and poll progress.
 Covers YouTube plus ~1800 other yt-dlp-supported sites. Lives on the media host
-(`v.wildcar.ru`) because that's where storage is mounted; the bot reaches it at
+(`homesrv`, public name `v.wildcar.ru`) because that's where storage is mounted; the bot reaches it at
 `http://wildcar.ru:8769/mcp` with the shared `MCP_AUTH_TOKEN`.
 
 Package: `yt_dlp_mcp` (`src/yt_dlp_mcp/`). Entry point: `yt-dlp-mcp` →

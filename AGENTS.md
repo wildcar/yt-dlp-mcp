@@ -12,7 +12,7 @@ authoritative inside this repo**; open the root harness only when reasoning abou
 how this server fits the bot / other MCPs.
 
 `yt-dlp-mcp` is the yt-dlp download worker (priority added after the original five
-servers). It deploys on the **media host** (`v.wildcar.ru`, same box as
+servers). It deploys on the **media host** (`homesrv`, public name `v.wildcar.ru`; same box as
 `rtorrent-mcp`) as a systemd unit on **port 8769** over streamable-HTTP, with a
 daily **`yt-dlp-mcp-update.timer`** that bumps the yt-dlp binary.
 
@@ -41,7 +41,7 @@ Telegram bot's "paste a video URL" flow is the main consumer.
 - OS / shell: Ubuntu 24.04 / `bash`, user `keeper` (passwordless sudo) on the dev box.
 - Commit identity: `wildcar <wildcar@mail.ru>`.
 - Remote: `github.com/wildcar/yt-dlp-mcp`.
-- Deploys to the media host (`v.wildcar.ru`), systemd unit on port 8769.
+- Deploys to the media host (`homesrv`, public name `v.wildcar.ru`), systemd unit on port 8769.
 
 ## Startup Checklist
 
