@@ -16,6 +16,8 @@ get_download_status (+ health_check) so the bot can download a pasted video URL
 - Metadata subprocesses are bounded by `PROBE_TIMEOUT_SECONDS=30`; a stalled
   YouTube probe is killed and returned as a structured error instead of hanging
   `probe`, `start_download`, or `health_check` indefinitely.
+- `start_download` reuses a successful probe for the same URL for 10 minutes, so
+  the preview→confirm flow does not make a second YouTube metadata request.
 - Harness migrated to the `agent-template` layout.
 
 ## Next

@@ -105,6 +105,24 @@ async def test_start_download_rejects_live(app_ctx: AppContext) -> None:
     assert resp.error.code == "unsupported"
 
 
+async def test_start_download_reuses_recent_probe(app_ctx: AppContext) -> None:
+    fake: FakeYtDlpClient = app_ctx.yt_dlp  # type: ignore[assignment]
+    url = "https://youtu.be/vid42"
+    fake.probe_payload = {
+        "id": "vid42",
+        "title": "Hello World",
+        "channel": "Veritasium",
+        "webpage_url": url,
+    }
+
+    preview = await probe_impl(app_ctx, url)
+    assert preview.error is None
+    started = await start_download_impl(app_ctx, url)
+
+    assert started.error is None
+    assert fake.probe_calls == [url]
+
+
 async def test_get_download_status_not_found(app_ctx: AppContext) -> None:
     resp = await get_download_status_impl(app_ctx, "nope")
     assert resp.error is not None

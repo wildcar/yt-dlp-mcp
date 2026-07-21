@@ -44,10 +44,12 @@ structured errors, never raised exceptions across the boundary. Registered in
   one back to download.
 - `start_download(url, format_selector?) -> StartDownloadResponse{ task: TaskInfo |
   None, error }`
-  — probes first (rejects empty URL / no video id / live streams), allocates an
-  output path, spawns yt-dlp in the background, returns a `task_id` (16-char hex,
-  `secrets.token_hex(8)`). Default selector targets browser-playable mp4 (H.264+AAC),
-  see below.
+  — reuses a successful `probe` for the same URL from the preceding 10 minutes,
+  otherwise probes first (rejects empty URL / no video id / live streams), allocates
+  an output path, spawns yt-dlp in the background, returns a `task_id` (16-char hex,
+  `secrets.token_hex(8)`). The short-lived cache avoids a duplicate YouTube metadata
+  request between preview and confirmation. Default selector targets browser-playable
+  mp4 (H.264+AAC), see below.
 - `get_download_status(task_id) -> GetDownloadStatusResponse{ task: TaskInfo | None,
   error }`
   — reads the SQLite row. `TaskInfo.state ∈ {queued, running, complete, failed,

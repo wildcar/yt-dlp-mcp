@@ -5,6 +5,12 @@ cross-repo log is `../AGENTS/HISTORY.md`.
 
 ---
 
+## 2026-07-21 · Reuse preview metadata on download confirmation
+- What: Added a bounded 10-minute/128-entry probe cache; `start_download` reuses the preview payload instead of probing YouTube again.
+- Why: The reported URL produced a preview, but the duplicate probe after «Скачать» stalled before a task could be created.
+- Files: `AGENTS/SPEC.md`, `AGENTS/STATE.md`, `context.py`, `tools.py`, tests.
+- Next: Redeploy `yt-dlp-mcp`; the existing subprocess timeout remains the fallback for uncached/stale URLs.
+
 ## 2026-07-21 · Bound stalled yt-dlp metadata extraction
 - What: Added a configurable 30-second timeout that kills and reaps hung probe/playlist subprocesses, including the probe inside `start_download`.
 - Why: Production accepted a Telegram download callback but then waited forever for yt-dlp metadata, leaving the user without a result.

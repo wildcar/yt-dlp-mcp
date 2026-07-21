@@ -69,6 +69,7 @@ async def probe_impl(ctx: AppContext, url: str) -> ProbeResponse:
     except YtDlpError as exc:
         return ProbeResponse(error=ToolError(code="upstream_error", message=str(exc)))
 
+    ctx.cache_probe(url, raw)
     return ProbeResponse(probe=_to_probe(raw))
 
 
@@ -147,10 +148,13 @@ async def start_download_impl(
             error=ToolError(code="invalid_argument", message="`url` must not be empty.")
         )
 
-    try:
-        raw = await ctx.yt_dlp.probe(url)
-    except YtDlpError as exc:
-        return StartDownloadResponse(error=ToolError(code="probe_failed", message=str(exc)))
+    raw = ctx.get_cached_probe(url)
+    if raw is None:
+        try:
+            raw = await ctx.yt_dlp.probe(url)
+        except YtDlpError as exc:
+            return StartDownloadResponse(error=ToolError(code="probe_failed", message=str(exc)))
+        ctx.cache_probe(url, raw)
 
     probe = _to_probe(raw)
     if not probe.video_id:

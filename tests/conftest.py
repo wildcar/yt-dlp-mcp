@@ -48,8 +48,10 @@ class FakeYtDlpClient(YtDlpClient):
     fake_progress: list[ProgressLine] = field(default_factory=list)
     fake_rc: int = 0
     raise_on_probe: Exception | None = None
+    probe_calls: list[str] = field(default_factory=list)
 
     async def probe(self, url: str) -> dict[str, Any]:
+        self.probe_calls.append(url)
         if self.raise_on_probe is not None:
             raise self.raise_on_probe
         return self.probe_payload or {}
