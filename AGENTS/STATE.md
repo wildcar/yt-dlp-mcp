@@ -19,10 +19,16 @@ get_download_status (+ health_check) so the bot can download a pasted video URL
   `probe`, `start_download`, or `health_check` indefinitely.
 - `start_download` reuses a successful probe for the same URL for 10 minutes, so
   the preview→confirm flow does not make a second YouTube metadata request.
+- Single-video pages that extractors report as one-entry playlists (1tv.ru) are
+  unwrapped in `probe`, so the card gets the real video id, duration and formats;
+  channel falls back to a per-host publisher name, then the hostname. Playlists
+  with several entries are refused by `start_download` as `unsupported`.
 - Harness migrated to the `agent-template` layout.
 
 ## Next
 
+- Deploy on `homesrv` (dev box has no ssh route to it): `sudo -u movie git -C
+  /opt/yt-dlp-mcp pull --ff-only && sudo systemctl restart yt-dlp-mcp`.
 - (when needed) `stop_download` tool — `cancelled` state + `kill()` already exist on
   the worker; no MCP tool exposes it yet.
 

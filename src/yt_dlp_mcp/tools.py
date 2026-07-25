@@ -19,6 +19,7 @@ import secrets
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import structlog
 
@@ -65,7 +66,7 @@ async def probe_impl(ctx: AppContext, url: str) -> ProbeResponse:
             error=ToolError(code="invalid_argument", message="`url` must not be empty.")
         )
     try:
-        raw = await ctx.yt_dlp.probe(url)
+        raw = _unwrap_single_entry(await ctx.yt_dlp.probe(url))
     except YtDlpError as exc:
         return ProbeResponse(error=ToolError(code="upstream_error", message=str(exc)))
 
@@ -73,7 +74,54 @@ async def probe_impl(ctx: AppContext, url: str) -> ProbeResponse:
     return ProbeResponse(probe=_to_probe(raw))
 
 
+def _unwrap_single_entry(raw: dict[str, Any]) -> dict[str, Any]:
+    """Collapse a one-video playlist result into a plain video info dict.
+
+    Some extractors always return ``_type: "playlist"`` for what the user
+    sees as a single video page, and ``--no-playlist`` doesn't change that
+    (1tv.ru is the case that surfaced this: ``https://www.1tv.ru/-/skrlsx``
+    yields a playlist of exactly one entry). The wrapper carries the page
+    title and thumbnail but no formats, no duration and the page id instead
+    of the video id — so probing it looks like an unsupported page and the
+    preview card comes out empty.
+
+    Entry values win; keys the entry doesn't fill (the page thumbnail, say)
+    stay as the wrapper had them. Playlists with two or more entries are
+    left alone — those are real playlists and belong to ``list_playlist``.
+    """
+    if raw.get("_type") != "playlist":
+        return raw
+    entries = [e for e in (raw.get("entries") or []) if isinstance(e, dict)]
+    if len(entries) != 1:
+        return raw
+    merged = dict(raw)
+    merged.pop("entries", None)
+    merged["_type"] = "video"
+    for key, value in entries[0].items():
+        if value not in (None, "", [], {}):
+            merged[key] = value
+    return merged
+
+
+# Publishers that fill neither `channel` nor `uploader`. Without a name the
+# download lands in a folder called "unknown" and the preview card has a
+# bare title; the hostname is a poor label for a human, a mapped name is a
+# good one. Everything unlisted falls back to the bare hostname.
+_HOST_CHANNELS = {
+    "1tv.ru": "Первый канал",
+}
+
+
+def _channel_from_url(page_url: str) -> str | None:
+    host = (urlparse(page_url).hostname or "").lower().removeprefix("www.")
+    if not host:
+        return None
+    return _HOST_CHANNELS.get(host, host)
+
+
 def _to_probe(raw: dict[str, Any]) -> Probe:
+    page_url = str(raw.get("webpage_url") or raw.get("original_url") or "")
+
     formats: list[Format] = []
     for f in raw.get("formats") or []:
         if not isinstance(f, dict):
@@ -117,10 +165,10 @@ def _to_probe(raw: dict[str, Any]) -> Probe:
 
     return Probe(
         video_id=str(raw.get("id") or ""),
-        url=str(raw.get("webpage_url") or raw.get("original_url") or ""),
+        url=page_url,
         title=str(raw.get("title") or ""),
         duration_seconds=_int_or_none(raw.get("duration")),
-        channel=raw.get("channel") or raw.get("uploader"),
+        channel=raw.get("channel") or raw.get("uploader") or _channel_from_url(page_url),
         channel_url=raw.get("channel_url") or raw.get("uploader_url"),
         uploader=raw.get("uploader"),
         upload_date=raw.get("upload_date"),
@@ -151,10 +199,22 @@ async def start_download_impl(
     raw = ctx.get_cached_probe(url)
     if raw is None:
         try:
-            raw = await ctx.yt_dlp.probe(url)
+            raw = _unwrap_single_entry(await ctx.yt_dlp.probe(url))
         except YtDlpError as exc:
             return StartDownloadResponse(error=ToolError(code="probe_failed", message=str(exc)))
         ctx.cache_probe(url, raw)
+
+    if raw.get("_type") == "playlist":
+        # Still a playlist after the single-entry unwrap, so it holds two or
+        # more videos. We hand yt-dlp one literal `-o` path, which every
+        # entry would write to in turn — each overwriting the last. Callers
+        # are expected to run `list_playlist` and pick a video.
+        return StartDownloadResponse(
+            error=ToolError(
+                code="unsupported",
+                message="URL is a playlist of several videos; download them one by one.",
+            )
+        )
 
     probe = _to_probe(raw)
     if not probe.video_id:

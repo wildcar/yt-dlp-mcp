@@ -5,6 +5,12 @@ cross-repo log is `../AGENTS/HISTORY.md`.
 
 ---
 
+## 2026-07-25 · Unwrap single-entry playlists, name the publisher
+- What: `probe` collapses a one-entry `_type: playlist` into the entry; `channel` falls back to a per-host name then the hostname; `start_download` refuses multi-entry playlists.
+- Why: `https://www.1tv.ru/-/skrlsx` is reported as a one-video playlist even under `--no-playlist`, so the probe had no formats, no duration and the page id as video id.
+- Files: `AGENTS/{SPEC,STATE}.md`, `tools.py`, `tests/test_tools.py`.
+- Next: Deploy on `homesrv` — the dev box has no ssh route there.
+
 ## 2026-07-21 · Correct media-server hostname
 - What: Documented `homesrv` as the media-server hostname and `v.wildcar.ru` as its public name.
 - Why: Maintainer clarified that yt-dlp service and cookie operations belong on `homesrv`; the Telegram bot runs elsewhere.

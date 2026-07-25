@@ -37,6 +37,14 @@ structured errors, never raised exceptions across the boundary. Registered in
   `thumbnails[]`, `formats[]` (with `is_progressive`), `is_live`, `age_limit`.
   The subprocess is terminated after `PROBE_TIMEOUT_SECONDS` (default 30) and
   returns a structured `upstream_error`, so callers never wait indefinitely.
+  A `_type: "playlist"` result holding exactly **one** entry is collapsed into
+  that entry (values from the entry win; keys it doesn't fill — the page
+  thumbnail, say — stay as the wrapper had them). Some extractors return that
+  shape for a plain single-video page even under `--no-playlist`, and the
+  wrapper alone has no formats, no duration and the page id instead of the
+  video id. `channel` falls back to a per-host publisher name (`1tv.ru` →
+  «Первый канал»), then to the bare hostname, so sites that fill neither
+  `channel` nor `uploader` still get a folder name and a preview subtitle.
 - `list_playlist(url, limit?) -> ListPlaylistResponse{ playlist_id, playlist_title,
   total_entries, entries[], error }`
   — `--flat-playlist -J --playlist-end <limit>`; `limit` defaults to
@@ -45,7 +53,9 @@ structured errors, never raised exceptions across the boundary. Registered in
 - `start_download(url, format_selector?) -> StartDownloadResponse{ task: TaskInfo |
   None, error }`
   — reuses a successful `probe` for the same URL from the preceding 10 minutes,
-  otherwise probes first (rejects empty URL / no video id / live streams), allocates
+  otherwise probes first (rejects empty URL / no video id / live streams / a
+  playlist of two or more videos — one literal `-o` path would have every entry
+  overwrite the last, so callers use `list_playlist` and pick), allocates
   an output path, spawns yt-dlp in the background, returns a `task_id` (16-char hex,
   `secrets.token_hex(8)`). The short-lived cache avoids a duplicate YouTube metadata
   request between preview and confirmation. Default selector targets browser-playable
