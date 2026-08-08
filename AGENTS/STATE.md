@@ -13,6 +13,9 @@ get_download_status (+ health_check) so the bot can download a pasted video URL
 - Five tools live, verified via MCP Inspector; deployed on the media host
   (`homesrv`, public name `v.wildcar.ru`, systemd port 8769) with the daily
   `yt-dlp-mcp-update.timer`.
+- Plex delete rights configured on `homesrv` (2026-08-08): plex in group `movie`,
+  `Clip/` tree 2775/0664 setgid, unit runs with `UMask=0002`; verified by a
+  write-probe as user plex. Setup commands in `AGENTS/ENV.md`.
 - Wired into the bot's pasted-URL flow + 60 s completion poller.
 - Metadata subprocesses are bounded by `PROBE_TIMEOUT_SECONDS=30`; a stalled
   YouTube probe is killed and returned as a structured error instead of hanging
@@ -27,11 +30,6 @@ get_download_status (+ health_check) so the bot can download a pasted video URL
 
 ## Next
 
-- Deploy on `homesrv` (dev box has no ssh route to it): `sudo -u movie git -C
-  /opt/yt-dlp-mcp pull --ff-only`, reinstall the systemd unit (it gained
-  `UMask=0002`), `sudo systemctl daemon-reload && sudo systemctl restart yt-dlp-mcp`.
-- One-time Plex delete-rights setup on `homesrv` (plex into group `movie`, `Clip/`
-  tree to 2775/0664) — commands in `AGENTS/ENV.md` § "Plex delete rights".
 - (when needed) `stop_download` tool — `cancelled` state + `kill()` already exist on
   the worker; no MCP tool exposes it yet.
 
