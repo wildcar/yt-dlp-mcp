@@ -28,7 +28,10 @@ get_download_status (+ health_check) so the bot can download a pasted video URL
 ## Next
 
 - Deploy on `homesrv` (dev box has no ssh route to it): `sudo -u movie git -C
-  /opt/yt-dlp-mcp pull --ff-only && sudo systemctl restart yt-dlp-mcp`.
+  /opt/yt-dlp-mcp pull --ff-only`, reinstall the systemd unit (it gained
+  `UMask=0002`), `sudo systemctl daemon-reload && sudo systemctl restart yt-dlp-mcp`.
+- One-time Plex delete-rights setup on `homesrv` (plex into group `movie`, `Clip/`
+  tree to 2775/0664) — commands in `AGENTS/ENV.md` § "Plex delete rights".
 - (when needed) `stop_download` tool — `cancelled` state + `kill()` already exist on
   the worker; no MCP tool exposes it yet.
 

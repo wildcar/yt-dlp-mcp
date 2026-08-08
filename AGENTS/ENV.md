@@ -25,6 +25,24 @@ sudo apt install -y ffmpeg nodejs
 - **Remote EJS solver** — fetched from github.com on first run
   (`--remote-components ejs:github`); the host needs outbound github.com access once.
 
+## Plex delete rights on `Clip/`
+
+Plex deletes a file by unlinking it from its directory, so it needs **write on the
+directories**, not on the files (this is why the world-writable rtorrent dirs "just
+work"). One-time host setup (Plex runs natively as user `plex`):
+
+```bash
+sudo usermod -aG movie plex
+sudo chgrp -R movie /mnt/storage/Media/Video/Clip
+sudo find /mnt/storage/Media/Video/Clip -type d -exec chmod 2775 {} +
+sudo find /mnt/storage/Media/Video/Clip -type f -exec chmod 0664 {} +
+sudo systemctl restart plexmediaserver   # group membership applies on restart
+```
+
+The unit sets `UMask=0002` so new per-channel dirs come out 2775 (setgid on `Clip/`
+keeps group `movie`) and files 0664 — without it every new channel dir is 0755 and
+Plex loses delete rights there again.
+
 ## Env file (`/etc/yt-dlp-mcp/yt-dlp-mcp.env`)
 
 ```

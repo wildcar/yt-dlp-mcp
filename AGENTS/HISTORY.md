@@ -5,6 +5,12 @@ cross-repo log is `../AGENTS/HISTORY.md`.
 
 ---
 
+## 2026-08-08 · Group-writable Clip/ so Plex can delete yt-dlp files
+- What: `UMask=0002` in the systemd unit; documented one-time host setup (plex in group `movie`, Clip tree 2775/0664 setgid).
+- Why: Plex deletes by unlinking from the directory; `Clip/` dirs were 0755 `movie:movie`, so Plex could delete rtorrent downloads (world-writable dirs) but not yt-dlp ones.
+- Files: deploy/yt-dlp-mcp.service, AGENTS/{ENV,STATE,HISTORY}.md.
+- Next: Apply on `homesrv` (no ssh route from dev): usermod/chgrp/chmod one-time + unit reinstall + restart plexmediaserver and yt-dlp-mcp.
+
 ## 2026-07-25 · Unwrap single-entry playlists, name the publisher
 - What: `probe` collapses a one-entry `_type: playlist` into the entry; `channel` falls back to a per-host name then the hostname; `start_download` refuses multi-entry playlists.
 - Why: `https://www.1tv.ru/-/skrlsx` is reported as a one-video playlist even under `--no-playlist`, so the probe had no formats, no duration and the page id as video id.

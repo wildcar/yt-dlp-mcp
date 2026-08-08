@@ -14,6 +14,11 @@ ExecStart=/opt/yt-dlp-mcp/.venv/bin/yt-dlp-mcp
 Restart=always
 RestartSec=5
 
+# Group-writable output: Plex deletes by unlinking from the directory, so the
+# per-channel dirs under OUTPUT_DIR must stay g+w for group `movie` (Plex's
+# user is a member). Dirs 2775 (setgid inherited from Clip/), files 0664.
+UMask=0002
+
 # Make sure the SQLite-task-store directory exists before the namespace
 # is built — otherwise ReadWritePaths fails with status=226/NAMESPACE.
 ExecStartPre=/usr/bin/install -d -o movie -g movie -m 0755 /opt/yt-dlp-mcp/.cache
