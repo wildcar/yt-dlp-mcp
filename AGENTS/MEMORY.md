@@ -43,3 +43,9 @@ Cross-repo facts live in `../AGENTS/MEMORY.md` — don't duplicate them here.
   `save_cookies`, the rotation is lost, and the session degrades to «Sign in to
   confirm you're not a bot» on most videos while popular ones still pass.
   `health_check.cookies_file_writable` reports it.
+- **`movie` on `homesrv` is nologin** — `sudo -iu movie` fails; use
+  `sudo -u movie env PATH=… bash -c "…"`. systemd steps that need root inside a
+  `User=movie` unit take the `+` prefix (`ExecStartPost=+/bin/systemctl restart …`).
+- **Fresh yt-dlp + writable cookies did not lift the bot check on 2026-09-14** — the
+  cookies exported 2026-08-25 were already dead; only a re-export helps. A successful
+  probe of a very popular video is not evidence the cookies work; the canary is.

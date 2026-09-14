@@ -18,4 +18,9 @@ WorkingDirectory=/opt/yt-dlp-mcp
 # non-fatal — the timer retries tomorrow and the existing yt-dlp keeps running.
 Environment=PATH=/home/movie/.local/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/usr/bin/env bash -c 'if command -v uv >/dev/null; then uv pip install --python /opt/yt-dlp-mcp/.venv/bin/python -U --quiet yt-dlp; else /opt/yt-dlp-mcp/.venv/bin/python -m pip install -U --quiet yt-dlp; fi'
-ExecStartPost=/bin/systemctl restart yt-dlp-mcp.service
+# `+` runs the restart with full privileges: the unit itself runs as `movie`,
+# which polkit does not let restart services (on homesrv `movie` is even a
+# nologin account), so without it the update installs fine and the unit still
+# ends in "failed". The MCP spawns yt-dlp as a subprocess, so the new binary
+# is used immediately anyway — the restart only refreshes the reported version.
+ExecStartPost=+/bin/systemctl restart yt-dlp-mcp.service

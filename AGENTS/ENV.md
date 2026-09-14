@@ -105,9 +105,14 @@ journalctl -u yt-dlp-mcp-update.service -n 50 --no-pager
 ```bash
 sudo -u movie git -C /opt/yt-dlp-mcp pull --ff-only
 # only when deps changed (pyproject/lockfile touched):
-sudo -u movie bash -c "cd /opt/yt-dlp-mcp && uv sync --no-dev"
+sudo -u movie env PATH=/home/movie/.local/bin:/usr/local/bin:/usr/bin:/bin \
+  bash -c "cd /opt/yt-dlp-mcp && uv sync --no-dev"
 sudo systemctl restart yt-dlp-mcp
 ```
+
+`movie` on `homesrv` is a **nologin** account: `sudo -iu movie …` answers "This account
+is currently not available" — always use `sudo -u movie … bash -c`, and pass `PATH`
+explicitly because sudo's `secure_path` does not include the user's `~/.local/bin`.
 
 ## Troubleshooting
 
