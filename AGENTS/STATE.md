@@ -34,16 +34,12 @@ get_download_status (+ health_check) so the bot can download a pasted video URL
   `movie` (rotated cookies lost → session dead). Fixed in-repo: update unit uses
   `uv pip`, `uv.lock` bumped to yt-dlp 2026.8.19, `health_check` reports
   `cookies_file_writable`, stderr tracebacks trimmed from error envelopes.
+  Applied on `homesrv` the same day: yt-dlp 2026.08.19 live, cookies 0660 and
+  re-exported (expire 2027-10-19), `sample_probe_ok=true`, `XgnBN8BLc-o` probes fine.
+  `movie` there is a nologin account — see ENV.md for the `sudo -u movie … bash -c` form.
 
 ## Next
 
-- **Operator on `homesrv`** (no ssh route from dev; `movie` is nologin — use
-  `sudo -u movie … bash -c`). Done 2026-09-14: pull, unit reinstall, `chmod 0660`
-  cookies, restart; the update unit's `uv pip` step worked (yt-dlp 2026.08.19 live,
-  `cookies_file_writable=true`), its `ExecStartPost` restart failed on permissions →
-  fixed with `+`. **Still open:** `sample_probe_ok=false` — the cookies exported
-  2026-08-25 are dead; re-export from a private window per `ENV.md`, install 0660,
-  restart, re-check `health_check`. Then pull + reinstall the unit once more.
 - (when needed) `stop_download` tool — `cancelled` state + `kill()` already exist on
   the worker; no MCP tool exposes it yet.
 

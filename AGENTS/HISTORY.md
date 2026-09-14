@@ -9,7 +9,7 @@ cross-repo log is `../AGENTS/HISTORY.md`.
 - What: update unit now runs `uv pip install --python .venv/bin/python -U yt-dlp` (pip fallback); `uv.lock` bumped yt-dlp 2026.3.17 → 2026.8.19; `health_check.cookies_file_writable`; `_clean_stderr` drops the trailing `save_cookies` traceback; ENV/MEMORY document 0660 cookies + private-window export.
 - Why: the bot answered «YouTube отклонил запрос сервера» for `youtu.be/XgnBN8BLc-o` — `health_check` on `homesrv` showed yt-dlp still 2026.03.17 (uv venv has no pip, so `python -m pip` failed every night since install) and `PermissionError` writing `cookies.txt` (0640), i.e. rotated YouTube cookies were never persisted.
 - Files: deploy/yt-dlp-mcp-update.service, uv.lock, src/yt_dlp_mcp/{models,tools}.py, src/yt_dlp_mcp/clients/ytdlp.py, tests/, AGENTS/{ENV,MEMORY,SPEC,STATE,HISTORY}.md.
-- Next: re-export YouTube cookies on `homesrv` — with yt-dlp 2026.08.19 and a writable jar the canary still hits the bot check, so the 2026-08-25 export is dead.
+- Next: — (cookies re-exported on `homesrv` the same day; canary and `XgnBN8BLc-o` probe OK).
 - Follow-up (same day): `ExecStartPost=+/bin/systemctl restart …` — the `movie`-owned unit could not restart the service; `movie` is a nologin account on `homesrv`, docs switched to `sudo -u movie … bash -c` with an explicit `PATH`.
 
 ## 2026-08-08 · Group-writable Clip/ so Plex can delete yt-dlp files
