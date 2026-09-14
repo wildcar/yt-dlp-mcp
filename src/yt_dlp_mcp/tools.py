@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import http.cookiejar
+import os
 import secrets
 from datetime import UTC, datetime
 from pathlib import Path
@@ -416,6 +417,12 @@ async def health_check_impl(ctx: AppContext) -> HealthCheckResponse:
         return HealthCheckResponse(error=ToolError(code="ytdlp_missing", message=str(exc)))
 
     cookies_iso, days_left = _cookies_expiry(ctx.settings.cookies_file)
+    cookies_writable: bool | None = None
+    if ctx.settings.cookies_file is not None:
+        # yt-dlp rewrites the jar on exit with the cookies YouTube rotated
+        # during the run; if that write fails the next run presents stale
+        # cookies and the login session is soon rejected as a bot.
+        cookies_writable = os.access(ctx.settings.cookies_file, os.W_OK)
 
     output_dir = ctx.settings.output_dir
     output_writable = _path_is_writable(output_dir)
@@ -435,6 +442,7 @@ async def health_check_impl(ctx: AppContext) -> HealthCheckResponse:
             cookies_file=str(ctx.settings.cookies_file) if ctx.settings.cookies_file else None,
             cookies_expires_at_min=cookies_iso,
             cookies_warn_days_left=days_left,
+            cookies_file_writable=cookies_writable,
             output_dir=str(output_dir),
             output_dir_writable=output_writable,
             sample_probe_ok=sample_ok,

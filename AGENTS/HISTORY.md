@@ -5,6 +5,12 @@ cross-repo log is `../AGENTS/HISTORY.md`.
 
 ---
 
+## 2026-09-14 · Fix the never-working update timer; expose cookies writability
+- What: update unit now runs `uv pip install --python .venv/bin/python -U yt-dlp` (pip fallback); `uv.lock` bumped yt-dlp 2026.3.17 → 2026.8.19; `health_check.cookies_file_writable`; `_clean_stderr` drops the trailing `save_cookies` traceback; ENV/MEMORY document 0660 cookies + private-window export.
+- Why: the bot answered «YouTube отклонил запрос сервера» for `youtu.be/XgnBN8BLc-o` — `health_check` on `homesrv` showed yt-dlp still 2026.03.17 (uv venv has no pip, so `python -m pip` failed every night since install) and `PermissionError` writing `cookies.txt` (0640), i.e. rotated YouTube cookies were never persisted.
+- Files: deploy/yt-dlp-mcp-update.service, uv.lock, src/yt_dlp_mcp/{models,tools}.py, src/yt_dlp_mcp/clients/ytdlp.py, tests/, AGENTS/{ENV,MEMORY,SPEC,STATE,HISTORY}.md.
+- Next: Apply on `homesrv` (see STATE.md «Next»): pull + `uv sync --no-dev` + reinstall unit + `chmod 0660` cookies + restart; re-export cookies if the canary still fails.
+
 ## 2026-08-08 · Group-writable Clip/ so Plex can delete yt-dlp files
 - What: `UMask=0002` in the systemd unit; documented one-time host setup (plex in group `movie`, Clip tree 2775/0664 setgid).
 - Why: Plex deletes by unlinking from the directory; `Clip/` dirs were 0755 `movie:movie`, so Plex could delete rtorrent downloads (world-writable dirs) but not yt-dlp ones.

@@ -9,8 +9,13 @@ Type=oneshot
 User=movie
 Group=movie
 WorkingDirectory=/opt/yt-dlp-mcp
-# `uv pip install -U yt-dlp` bumps the venv-pinned binary; the
-# subsequent restart picks it up. Failures are non-fatal — the timer
-# retries tomorrow, and the existing yt-dlp keeps running.
-ExecStart=/usr/bin/env bash -c '/opt/yt-dlp-mcp/.venv/bin/python -m pip install -U --quiet yt-dlp'
+# The venv is created by `uv sync`, which ships **no pip** — a plain
+# `python -m pip install` dies with "No module named pip", so the timer
+# silently never updated anything (prod sat on yt-dlp 2026.03.17 for five
+# months). Use uv's pip shim against the venv interpreter instead; uv lives
+# in the service user's ~/.local/bin (same layout as the bot host), with the
+# system dirs as fallback and plain pip as a last resort. Failures are
+# non-fatal — the timer retries tomorrow and the existing yt-dlp keeps running.
+Environment=PATH=/home/movie/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/env bash -c 'if command -v uv >/dev/null; then uv pip install --python /opt/yt-dlp-mcp/.venv/bin/python -U --quiet yt-dlp; else /opt/yt-dlp-mcp/.venv/bin/python -m pip install -U --quiet yt-dlp; fi'
 ExecStartPost=/bin/systemctl restart yt-dlp-mcp.service

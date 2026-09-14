@@ -153,6 +153,15 @@ class HealthCheck(_Base):
             "Days until the soonest auth-relevant cookie expires. <14 → warn the operator."
         ),
     )
+    cookies_file_writable: bool | None = Field(
+        None,
+        description=(
+            "True when the service user can write the cookies file; None when no "
+            "cookies file is configured. yt-dlp persists YouTube's rotated cookies "
+            "on exit — a read-only file drops them and the exported session dies "
+            "after the first rotation («Sign in to confirm you're not a bot»)."
+        ),
+    )
     output_dir: str
     output_dir_writable: bool
     sample_probe_ok: bool = Field(

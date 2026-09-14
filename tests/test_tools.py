@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import os
+from pathlib import Path
 
 from yt_dlp_mcp.clients.ytdlp import ProgressLine
 from yt_dlp_mcp.context import AppContext
@@ -243,4 +245,26 @@ async def test_health_check_reports_version_and_writability(app_ctx: AppContext)
     assert resp.health is not None
     assert resp.health.yt_dlp_version == "2025.10.14"
     assert resp.health.output_dir_writable is True
+    assert resp.health.cookies_file_writable is None  # no cookies configured
     assert resp.health.sample_probe_ok is True
+
+
+async def test_health_check_reports_cookies_writability(
+    app_ctx: AppContext, tmp_path: Path
+) -> None:
+    fake: FakeYtDlpClient = app_ctx.yt_dlp  # type: ignore[assignment]
+    fake.probe_payload = {"id": "jNQXAC9IVRw"}
+    cookies = tmp_path / "cookies.txt"
+    cookies.write_text("# Netscape HTTP Cookie File\n")
+    app_ctx.settings.cookies_file = cookies
+
+    cookies.chmod(0o440)
+    resp = await health_check_impl(app_ctx)
+    assert resp.health is not None
+    if os.geteuid() != 0:  # root ignores mode bits
+        assert resp.health.cookies_file_writable is False
+
+    cookies.chmod(0o660)
+    resp = await health_check_impl(app_ctx)
+    assert resp.health is not None
+    assert resp.health.cookies_file_writable is True

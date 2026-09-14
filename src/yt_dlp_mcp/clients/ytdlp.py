@@ -172,9 +172,7 @@ class YtDlpClient:
             raise YtDlpError(err) from None
         return payload
 
-    async def _communicate_metadata(
-        self, proc: asyncio.subprocess.Process
-    ) -> tuple[bytes, bytes]:
+    async def _communicate_metadata(self, proc: asyncio.subprocess.Process) -> tuple[bytes, bytes]:
         """Collect a metadata command and reap it when the upstream hangs."""
         try:
             return await asyncio.wait_for(proc.communicate(), timeout=self.probe_timeout_seconds)
@@ -336,8 +334,18 @@ def _parse_progress_line(text: str) -> ProgressLine | None:
     )
 
 
+_TRACEBACK_RE = re.compile(r"^Traceback \(most recent call last\):", re.MULTILINE)
+
+
 def _clean_stderr(stderr: bytes) -> str:
     text = stderr.decode("utf-8", errors="replace").strip()
+    # yt-dlp 2026.03 may append a Python traceback from its cleanup path
+    # (e.g. ``save_cookies`` on a read-only cookies file) *after* the real
+    # extractor error. Keep only what came before it, unless the traceback
+    # is all there is — then keep its final line (the exception itself).
+    if m := _TRACEBACK_RE.search(text):
+        head = text[: m.start()].strip()
+        text = head or text.splitlines()[-1].strip()
     # yt-dlp prefixes most messages with "ERROR:" — drop it for tidier
     # MCP error envelopes.
     return re.sub(r"^ERROR:\s*", "", text, flags=re.MULTILINE)

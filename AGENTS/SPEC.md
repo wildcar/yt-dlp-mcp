@@ -67,7 +67,9 @@ structured errors, never raised exceptions across the boundary. Registered in
   `speed_bps`, and `output_path` (set only on `complete`).
 - `health_check() -> HealthCheckResponse{ health: HealthCheck | None, error }`
   — yt-dlp version + bin path, cookies expiry (`cookies_warn_days_left`, <14 →
-  rotate), output-dir writability, and a canary probe of a stable URL
+  rotate), cookies writability (`cookies_file_writable`; `false` means yt-dlp cannot
+  persist YouTube's rotated cookies and the session will be rejected as a bot),
+  output-dir writability, and a canary probe of a stable URL
   ("Me at the zoo", `jNQXAC9IVRw`).
 
 ### Default format selector

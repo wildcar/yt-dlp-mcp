@@ -15,7 +15,7 @@ import asyncio
 
 import pytest
 
-from yt_dlp_mcp.clients.ytdlp import YtDlpClient, YtDlpError
+from yt_dlp_mcp.clients.ytdlp import YtDlpClient, YtDlpError, _clean_stderr
 
 
 class _FakeProc:
@@ -91,3 +91,27 @@ async def test_list_playlist_raises_on_null_stdout(monkeypatch: pytest.MonkeyPat
     _patch_exec(monkeypatch, _FakeProc(b"null\n", b"ERROR: nope\n", 1))
     with pytest.raises(YtDlpError):
         await YtDlpClient().list_playlist("https://youtube.com/playlist?list=PL1", limit=5)
+
+
+def test_clean_stderr_drops_trailing_cleanup_traceback() -> None:
+    stderr = (
+        b"ERROR: [youtube] XgnBN8BLc-o: Sign in to confirm you\xe2\x80\x99re not a bot.\n"
+        b"Traceback (most recent call last):\n"
+        b'  File "/opt/yt-dlp-mcp/.venv/bin/yt-dlp", line 10, in <module>\n'
+        b"    sys.exit(main())\n"
+        b"PermissionError: [Errno 13] Permission denied: '/etc/yt-dlp-mcp/cookies.txt'\n"
+    )
+    assert (
+        _clean_stderr(stderr) == "[youtube] XgnBN8BLc-o: Sign in to confirm you\u2019re not a bot."
+    )
+
+
+def test_clean_stderr_keeps_exception_line_when_only_traceback() -> None:
+    stderr = (
+        b"Traceback (most recent call last):\n"
+        b'  File "x.py", line 1, in <module>\n'
+        b"PermissionError: [Errno 13] Permission denied: '/etc/yt-dlp-mcp/cookies.txt'\n"
+    )
+    assert _clean_stderr(stderr) == (
+        "PermissionError: [Errno 13] Permission denied: '/etc/yt-dlp-mcp/cookies.txt'"
+    )

@@ -33,3 +33,13 @@ Cross-repo facts live in `../AGENTS/MEMORY.md` — don't duplicate them here.
 - Slug naming keeps **Unicode** (Cyrillic OK on ext4 + Plex) — only filesystem-unsafe
   chars are stripped. (Earlier scaffold notes mentioned ASCII transliteration; the
   code was since relaxed.)
+- **The `uv sync` venv has no `pip`.** Anything that runs `.venv/bin/python -m pip`
+  fails with "No module named pip" — the update unit used exactly that and never
+  updated yt-dlp (2026.03.17 from install to 2026-09-14). Use
+  `uv pip install --python .venv/bin/python …` and keep `uv.lock` bumped, because
+  `uv sync` pins yt-dlp back to the locked version.
+- **Cookies must be writable by `movie` (0660), not just readable.** yt-dlp saves
+  YouTube's rotated cookies on exit; a 0640 file raises `PermissionError` in
+  `save_cookies`, the rotation is lost, and the session degrades to «Sign in to
+  confirm you're not a bot» on most videos while popular ones still pass.
+  `health_check.cookies_file_writable` reports it.

@@ -65,10 +65,19 @@ systemd unit install) is in `README.md` / git history.
 ## Cookies (`/etc/yt-dlp-mcp/cookies.txt`)
 
 - Netscape format; required for age-gated / member-only / region-locked videos.
-- Install: `sudo install -m 0640 -o root -g movie cookies.txt /etc/yt-dlp-mcp/` then
-  `systemctl restart yt-dlp-mcp`. Group `movie` so the service user can read it.
+- Install: `sudo install -m 0660 -o root -g movie cookies.txt /etc/yt-dlp-mcp/` then
+  `systemctl restart yt-dlp-mcp`. Group `movie` so the service user can read **and
+  write** it — yt-dlp rewrites the jar on exit with the cookies YouTube rotated
+  during the run. A `0640` file (the pre-2026-09-14 instruction) makes every run end
+  in `PermissionError … cookies.txt`, the rotated values are lost, and the exported
+  login session is soon rejected with «Sign in to confirm you're not a bot».
+  `health_check.cookies_file_writable` must be `true`.
 - `ProtectSystem=strict` blocks writes — the unit grants
   `ReadWritePaths=-/etc/yt-dlp-mcp`.
+- Export per the yt-dlp wiki («Exporting YouTube cookies»): a **private/incognito
+  window**, log in, open `https://www.youtube.com/robots.txt`, export with "Get
+  cookies.txt LOCALLY", then **close that window** so the browser never rotates the
+  session behind yt-dlp's back.
 - `health_check.cookies_warn_days_left < 14` → re-export from a dedicated bot browser
   profile via the "Get cookies.txt LOCALLY" extension. Auth cookies last ~6–12 months.
 - `cookies_warn_days_left` null with a configured file → not readable by `movie` or
@@ -77,8 +86,14 @@ systemd unit install) is in `README.md` / git history.
 ## Daily yt-dlp update timer
 
 `yt-dlp-mcp-update.timer` fires ~04:00 daily (30-min jitter); the paired service runs
-`pip install -U yt-dlp` in the venv and restarts the MCP. Bumps the **yt-dlp binary
-only**, not this service's code. Manual trigger:
+`uv pip install --python .venv/bin/python -U yt-dlp` and restarts the MCP. Bumps the
+**yt-dlp binary only**, not this service's code. The venv comes from `uv sync` and has
+**no pip module** — the original `python -m pip install -U` unit failed every night
+with "No module named pip", so prod sat on yt-dlp 2026.03.17 from install until
+2026-09-14 (fixed in `deploy/yt-dlp-mcp-update.service`; reinstall the unit file).
+`uv sync --no-dev` resets yt-dlp to the version in `uv.lock`, so bump the lock
+(`uv lock --upgrade-package yt-dlp`) with releases, or run the update service right
+after a sync. Manual trigger:
 
 ```bash
 sudo systemctl start yt-dlp-mcp-update.service
@@ -101,4 +116,12 @@ sudo systemctl restart yt-dlp-mcp
   egress.
 - **Downloads hang at 99%** — ffmpeg muxing; check `journalctl -u yt-dlp-mcp -f`.
 - **`health_check.sample_probe_ok=false`** — yt-dlp can't reach YouTube; check egress
-  + DNS first.
+  + DNS first. If `sample_probe_detail` says «Sign in to confirm you're not a bot», see
+  the next bullet.
+- **«Sign in to confirm you're not a bot»** (bot surfaces it as `ydl.youtube_blocked`)
+  — YouTube's bot check on a server IP; the cookies are the only thing that lifts it.
+  Check, in order: (1) `health_check.yt_dlp_version` is current (`pip index versions
+  yt-dlp` / PyPI) — run the update service; (2) `cookies_file_writable=true` — else
+  `chmod 0660 /etc/yt-dlp-mcp/cookies.txt`; (3) re-export cookies as described above.
+  Popular videos (e.g. `dQw4w9WgXcQ`) often pass even with dead cookies, so a single
+  successful probe proves nothing — use the canary (`sample_probe_ok`).
